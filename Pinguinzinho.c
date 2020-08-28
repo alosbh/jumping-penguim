@@ -1,0 +1,408 @@
+#include <allegro.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+const int TELA_LARGURA = 1200;
+const int TELA_ALTURA = 650;
+int timer = 0;
+void tempo() {
+	timer++;
+}
+
+int main(){
+	//Inicialização
+	allegro_init();
+	install_timer();
+	install_keyboard();
+	set_color_depth(32);	
+	set_gfx_mode(GFX_AUTODETECT_WINDOWED, TELA_LARGURA, TELA_ALTURA, 0, 0);
+	set_window_title("Joguinho");
+	
+	//funções
+	install_int_ex(tempo, MSEC_TO_TIMER(1));
+	
+	//CARREGAMENTO DAS IMAGENS
+	BITMAP* buffer = create_bitmap(TELA_LARGURA,TELA_ALTURA);
+	BITMAP* pinguim_andando[4];
+	pinguim_andando[0] = load_bitmap("pinguim_andando_1.bmp", NULL);
+	pinguim_andando[1] = load_bitmap("pinguim_andando_2.bmp", NULL);
+	pinguim_andando[2] = load_bitmap("pinguim_andando_3.bmp", NULL);
+	pinguim_andando[3] = load_bitmap("pinguim_andando_4.bmp", NULL);
+	BITMAP* pinguim_voltando[4];
+	pinguim_voltando[0] = load_bitmap("pinguim_voltando_1.bmp", NULL);
+	pinguim_voltando[1] = load_bitmap("pinguim_voltando_2.bmp", NULL);
+	pinguim_voltando[2] = load_bitmap("pinguim_voltando_3.bmp", NULL);
+	pinguim_voltando[3] = load_bitmap("pinguim_voltando_4.bmp", NULL);
+	BITMAP* pinguim_voando[4];
+	pinguim_voando[0] = load_bitmap("pinguim_voando_1.bmp", NULL);
+	pinguim_voando[1] = load_bitmap("pinguim_voando_2.bmp", NULL);
+	pinguim_voando[2] = load_bitmap("pinguim_voando_3.bmp", NULL);
+	pinguim_voando[3] = load_bitmap("pinguim_voando_4.bmp", NULL);
+	BITMAP* pinguim_morto = load_bitmap("pinguim_morto.bmp", NULL);
+	BITMAP* gota = load_bitmap("gota.bmp", NULL);
+	BITMAP* fundo = load_bitmap("fundo.bmp", NULL);
+	BITMAP* titulo = load_bitmap("titulo.bmp", NULL);
+	BITMAP* fade = load_bitmap("fade.bmp", NULL);
+	BITMAP* plataforma = load_bitmap("plataforma.bmp", NULL);
+	
+	//Variáveis
+	int altura_pinguim = pinguim_andando[0]->h;
+	int largura_pinguim = pinguim_andando[0]->w;
+	int altura_plataforma = plataforma->h;
+	int x = 50, y = 220; 				//POSIÇÃO INICIAL DO PINGUIM
+	float dx = 10, dy = 10;				//VEKICUDADE DE DESLOCAMENTO TERRA
+	int direcao = 0;			
+
+	//VARIAVEIS DE TIMER
+	int frame_atual = 0;
+	int tempo_troca = 100;
+	int num_frames = 4;
+	int frame_voo = 0;
+	int tempo_troca_voo = 100;
+	float delay;	
+
+	//VARIAVEIS DO GRÁFICO
+	int a=2,b=2,c=-3;
+	float j[20],k[20];
+	float xvertice;
+	int diametroponto = 5;
+	int raioponto = diametroponto/2;
+	int xorigem= TELA_LARGURA/2-180, yorigem=TELA_ALTURA/2;
+	float maiory;
+	float limiteeixo = TELA_LARGURA/2-180;
+	float coeficientey;
+	int i=0;
+	int h=19;
+	//VARIAEIS BOOLEANAS
+	int voando = 0;
+	int andando = 0;
+	int parado = 1;	
+	int colidiu = 0;
+	int acabou = 0;
+	
+	while(!key[KEY_ESC]){
+		
+		delay = timer;
+		
+		if(key[KEY_RIGHT]){
+			 x += dx;
+			 direcao = 0;
+		}
+		
+		if(key[KEY_LEFT]) {
+			 x -= dy;
+			  direcao = 1;
+		}
+			
+			
+		if(key[KEY_A]){
+			a++;
+			rest(150);
+		}
+		if(key[KEY_Z]) {
+			a--;
+			rest(150);		
+		}
+		if(key[KEY_S]){
+			b++;
+			rest(150);
+		}
+		if(key[KEY_X]) {
+			b--;
+			rest(150);		
+		}
+		if(key[KEY_D]){
+			c++;
+			rest(150);
+		}
+		if(key[KEY_C]) {
+			c--;
+			rest(150);		
+		}	
+		if(key[KEY_SPACE]){	
+			voando = 1;
+			andando = 0;
+			parado = 0;
+		}
+		
+		if(acabou ==1){
+			rest(3000);
+			x = 50;
+			y = 220;
+			h = 19;
+			parado= 1;
+			voando =0;
+			andando = 0;
+			colidiu = 0;
+			i = 0;
+			acabou=0;
+		}	
+			
+		frame_atual = (timer/tempo_troca) % num_frames;
+		frame_voo = (timer/tempo_troca_voo) % num_frames;
+				
+		//DESENHOS
+	
+		draw_sprite(buffer, fundo, 0, 0);
+		rectfill(buffer,TELA_LARGURA/3-180,TELA_ALTURA/2,((TELA_LARGURA*2)/3)-180,(TELA_ALTURA/2)+1, makecol(0,0,0));
+		rectfill(buffer,TELA_LARGURA/2-180,(TELA_ALTURA-TELA_LARGURA/3)/2,TELA_LARGURA/2-179,((TELA_ALTURA-TELA_LARGURA/3)/2)+TELA_LARGURA/3, makecol(0,0,0));
+		
+		if(a != 0){
+			xvertice = (b/(2*a))*-1;
+			xvertice -= 10;
+		}
+		
+		for(i=(0);i<(20);i++){
+			j[i]=i+xvertice;
+			k[i] = (a *(j[i] * j[i])) + ( b * j[i] ) + c;		
+		
+		
+			if(abs(k[0])>abs(k[1])) {
+				maiory = abs(k[0]);	
+				}
+				else {
+					maiory = abs(k[1]);
+				}
+				if(maiory>abs(k[2])){
+				}
+				else {
+				maiory = abs(k[2]);
+				}
+		  		if(maiory>abs(k[3])){
+				}
+				else{
+					maiory=abs(k[3]);
+				}
+				if(maiory>abs(k[4])){
+				}
+				else{
+					maiory=abs(k[4]);
+				}
+				if(maiory>abs(k[5])){
+				}
+				else {
+					maiory=abs(k[5]);
+				}
+				if(maiory>abs(k[6])){
+				}
+				else{
+					maiory=abs(k[6]);
+				}
+				if(maiory>abs(k[7])){
+				}
+				else{
+					maiory=abs(k[7]);
+				}
+				if(maiory>abs(k[8])){
+				}
+				else{
+					maiory=abs(k[8]);
+				}
+				if(maiory>abs(k[9])){
+				}
+				else{
+					maiory=abs(k[9]);
+				}
+				if(maiory>abs(k[10])){
+				}
+				else{
+					maiory=abs(k[10]);
+				}
+				if(maiory>abs(k[11])){
+				}
+				else{
+					maiory=abs(k[11]);
+				}
+				if(maiory>abs(k[12])){
+				}
+				else{
+					maiory=abs(k[12]);
+				}
+				if(maiory>abs(k[13])){
+				}
+				else{
+					maiory=abs(k[13]);
+				}
+				if(maiory>abs(k[14])){
+				}
+				else{
+					maiory=abs(k[14]);
+				}
+				if(maiory>abs(k[15])){
+				}
+				else{
+					maiory=abs(k[15]);
+				}
+				if(maiory>abs(k[16])){
+				}
+				else{
+					maiory=abs(k[16]);
+				}
+				if(maiory>abs(k[17])){
+				}
+				else{
+					maiory=abs(k[17]);
+				}
+				if(maiory>abs(k[18])){
+				}
+				else{
+					maiory=abs(k[18]);
+				}
+				if(maiory>abs(k[19])){
+				}
+				else{
+					maiory=abs(k[19]);
+				}
+				
+				
+		
+		coeficientey = 200/maiory;
+		
+		
+		
+		if(a !=0){
+		
+		circlefill(buffer, xorigem+(j[i]*coeficientey*-6)+raioponto,yorigem+(k[i]*coeficientey*-1)+raioponto,diametroponto,makecol(0,0,255));
+     
+	    }
+		else{
+			circlefill(buffer, xorigem+(j[i]*-coeficientey)+raioponto,yorigem+(k[i]*-coeficientey)+raioponto,diametroponto,makecol(0,0,255));
+     	
+			}
+		
+	
+		}			
+			
+			if(voando == 1){
+			
+				while(xorigem+(j[h]*coeficientey*-6)<((TELA_LARGURA/2)-180)+20){
+					h--;
+				}
+			
+		 		x = xorigem+(j[h]*coeficientey*-6)-(largura_pinguim/2);
+		 		y = yorigem+(k[h]*coeficientey*-1)-(altura_pinguim/2);
+			
+				if(h==0){
+				
+					voando =0;
+					colidiu = 1;
+				}
+			
+				else{	
+					h--;
+				}
+		 	}
+			
+			if(voando ==1){
+				
+				draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+				draw_sprite(buffer, pinguim_voando[frame_voo], x, y);
+				
+			}
+		
+			else{
+			
+			if(colidiu == 1){
+				
+				if(a>0){
+					draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+					draw_sprite(buffer, fade, x, y);
+					acabou = 1;	
+				}
+				
+				else if(x>615){
+					draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+					draw_sprite(buffer, gota, x, TELA_ALTURA-135);
+					acabou =1;
+				}
+				else{
+					draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+					draw_sprite(buffer, pinguim_morto, x, y);
+					acabou =1;
+				}
+				
+			}
+			
+			else{
+		
+			if(!key[KEY_RIGHT] && !key[KEY_LEFT]) {
+					if(direcao == 0){
+					
+					draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+					draw_sprite(buffer, pinguim_andando[0], x, y);
+					}
+					else {
+					draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+					draw_sprite(buffer, pinguim_voltando[0], x, y);	
+					}
+		    }
+			else {
+				
+				if(direcao == 0) {
+				draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+				draw_sprite(buffer, pinguim_andando[frame_atual], x, y);
+				}
+				else {
+				draw_sprite(buffer, plataforma, 0, (TELA_ALTURA - altura_plataforma));
+				draw_sprite(buffer, pinguim_voltando[frame_atual], x, y);	
+				}
+			
+			}
+			}
+			}
+	
+		//textprintf_ex(buffer, font, 100, 100, makecol(255,0,0), -1, "%d", timer);
+			
+		if(b>=0 && c>=0){
+			textprintf_ex(buffer, font, 15, 15, makecol(166,202,240), -1, "y = %dx^2  + %dx + %d", a,b,c);
+			}
+		else if(b>=0 && c<0){
+			textprintf_ex(buffer, font, 15, 15, makecol(166,202,240), -1, "y = %dx^2 + %dx  %d", a,b,c);
+			} else if(b<0 && c>=0){
+				textprintf_ex(buffer, font, 15, 15, makecol(166,202,240), -1, "y = %dx^2  %dx + %d", a,b,c);
+				}
+			else if(b<0 && c<0){
+				textprintf_ex(buffer, font, 15, 15, makecol(166,202,240), -1, "y = %dx^2  %dx  %d", a,b,c);
+				}
+				
+		draw_sprite(buffer, titulo, 330, 5);		
+		
+		draw_sprite(screen, buffer, 0, 0);
+		
+		if(voando==1){
+			rest(100);
+			}
+			else{
+		rest(20);
+	}
+	//	while(timer == delay){}			
+		
+		clear(buffer);	
+		
+	}
+	
+	//FINALIZAÇÃO
+	destroy_bitmap(buffer);
+	destroy_bitmap(pinguim_andando[0]);
+	destroy_bitmap(pinguim_andando[1]);
+	destroy_bitmap(pinguim_andando[2]);
+	destroy_bitmap(pinguim_andando[3]);
+	destroy_bitmap(pinguim_voltando[0]);
+	destroy_bitmap(pinguim_voltando[1]);
+	destroy_bitmap(pinguim_voltando[2]);
+	destroy_bitmap(pinguim_voltando[3]);
+	destroy_bitmap(pinguim_voando[0]);
+	destroy_bitmap(pinguim_voando[1]);
+	destroy_bitmap(pinguim_voando[2]);
+	destroy_bitmap(pinguim_voando[3]);
+	destroy_bitmap(pinguim_morto);
+	destroy_bitmap(gota);
+	destroy_bitmap(fade);
+	destroy_bitmap(titulo);
+	destroy_bitmap(fundo);
+	destroy_bitmap(plataforma);
+	
+	return 0;	
+}
+END_OF_MAIN();
+
